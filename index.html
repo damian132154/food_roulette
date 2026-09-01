@@ -570,14 +570,18 @@ el('cadd').onclick=()=>{
 const KKEY='943c6dbf693c303fc47b5d1856d46da5';
 const USEK=location.protocol==='http:'||location.protocol==='https:';
 let KMAP=null,KMARK=[],KREADY=false;
+let KTRIED=false, KFAIL=false;
 function loadKakao(){
+  if(KTRIED)return;
+  KTRIED=true;
   const s=document.createElement('script');
   s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+KKEY+
         '&libraries=services&autoload=false';
   s.onerror=()=>{
-    el('nearinfo').innerHTML='<b style="color:#c2410c">카카오 거부(403)</b> — '+
-      '도메인 등록 확인 필요';
-    initMap();};
+    KFAIL=true;
+    el('nearinfo').innerHTML='<b style="color:#c2410c">카카오 지도를 못 불러왔다</b>'+
+      ' — 광고 차단 확장 프로그램이 막았을 수 있다 (시크릿 창에서 확인)';
+    initMap();nearby();};
   s.onload=()=>kakao.maps.load(()=>{
     KREADY=true;
     KMAP=new kakao.maps.Map(el('lmap'),{
@@ -676,14 +680,16 @@ const CUIS={korean:'한식',japanese:'일식',chinese:'중식',italian:'양식',
 let waitN=0;
 function nearby(){
   if(!LOC){locate();return;}
-  if(USEK){
+  if(USEK&&!KFAIL){
     if(kakaoSearch()){waitN=0;return;}
-    if(waitN<20){                      // 카카오 SDK 가 붙을 때까지 기다린다
+    if(waitN<15){
       waitN++;
       el('near').innerHTML='<div class="tip">지도 준비 중…</div>';
       setTimeout(nearby,400);return;
     }
+    KFAIL=true;
     el('nearinfo').textContent='카카오 실패 — OSM 으로 대체';
+    initMap();
   }
   const r=+el('rad').value;
   el('near').innerHTML='<div class="tip">찾는 중…</div>';
