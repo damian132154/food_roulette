@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>뭐 먹지</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#fdf9f6;--card:#fff;--ink:#151922;--ink2:#5b6472;--ink3:#98a0ac;
+--line:#eee3da;--warm:#c2410c;--green:#0f766e;--blue:#2563eb;--red:#dc2626}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);
+ font-family:"맑은 고딕",Malgun Gothic,system-ui,sans-serif;
+ background:radial-gradient(900px 420px at 50% -12%,#ffe8d8 0%,transparent 62%),
+ var(--bg)}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 20px 80px}
+header{text-align:center;margin-bottom:18px}
+h1{margin:0 0 5px;font-size:30px;font-weight:800;letter-spacing:-.03em}
+h1 b{color:var(--warm)}
+.lead{margin:0;color:var(--ink2);font-size:13px}
+#clock{color:var(--ink3);font-size:12.5px;margin-top:5px}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+@media(max-width:900px){.cols{grid-template-columns:1fr}}
+.card{background:#fff;border:1px solid var(--line);border-radius:16px;
+ padding:17px 19px;margin-bottom:13px;box-shadow:0 1px 3px rgba(21,25,34,.05)}
+.ch{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
+.ct{font-size:14px;font-weight:800}
+.cs{font-size:11.5px;color:var(--ink3);margin-left:auto}
+#lmap{width:100%;height:330px;border-radius:12px;border:1px solid var(--line);
+ background:#eef1f5}
+.stage{background:#fff;border:1px solid var(--line);border-radius:18px;
+ padding:20px 18px;text-align:center;box-shadow:0 4px 20px rgba(194,65,12,.07)}
+.wheelbox{position:relative;width:250px;height:250px;margin:0 auto 8px}
+#wheel{width:100%;height:100%;border-radius:50%;position:relative;
+ transition:transform 4s cubic-bezier(.17,.67,.24,1);border:5px solid #fff;
+ box-shadow:0 6px 24px rgba(194,65,12,.18)}
+.sl{position:absolute;inset:0;clip-path:polygon(50% 50%,50% 0,100% 0);
+ transform-origin:50% 50%;display:flex;align-items:flex-start;
+ justify-content:center;padding-top:15px}
+.sl span{font-size:19px;transform:rotate(22deg)}
+.pin{position:absolute;top:-12px;left:50%;transform:translateX(-50%);
+ font-size:24px;z-index:5}
+.hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+ width:54px;height:54px;border-radius:50%;background:#fff;z-index:4;
+ display:flex;align-items:center;justify-content:center;font-size:11.5px;
+ font-weight:800;color:var(--warm);box-shadow:0 2px 8px rgba(0,0,0,.12)}
+#slot{font-size:26px;font-weight:800;letter-spacing:-.03em;line-height:1.25;
+ min-height:46px}
+.emo{display:block;font-size:48px;line-height:1.1}
+#meta{font-size:12.5px;color:var(--ink2);margin-top:7px;min-height:18px}
+#meta .kc{font-weight:800;color:var(--warm)}
+.btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.btn{padding:12px 26px;border:none;border-radius:12px;background:var(--warm);
+ color:#fff;font-size:14.5px;font-weight:800;cursor:pointer;font-family:inherit;
+ box-shadow:0 3px 10px rgba(194,65,12,.22)}
+.btn.g{background:#fff;color:var(--ink2);border:1px solid var(--line);
+ box-shadow:none;font-weight:700;font-size:13px;padding:12px 18px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.sg{border:1px solid var(--line);background:#fff;color:var(--ink2);
+ padding:6px 13px;border-radius:20px;font-size:12px;cursor:pointer;
+ font-family:inherit;font-weight:700}
+.sg:hover{border-color:var(--warm);color:var(--warm)}
+.sg.on{background:var(--warm);color:#fff;border-color:var(--warm)}
+.sg.gr.on{background:var(--green);border-color:var(--green)}
+.sg.bl.on{background:var(--blue);border-color:var(--blue)}
+.lb{font-size:12px;font-weight:800;color:var(--ink2);margin:12px 0 6px}
+.lb:first-child{margin-top:0}
+.pool{font-size:12px;color:var(--ink3);margin-top:10px}
+.cands{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;max-height:88px;
+ overflow:hidden}
+.cd{font-size:11.5px;padding:4px 10px;border-radius:20px;background:#fdf3ec;
+ color:var(--warm);border:1px solid #f6ded0}
+.nr{display:flex;align-items:center;gap:9px;padding:9px 11px;
+ border:1px solid var(--line);border-radius:10px;margin-bottom:6px;
+ text-decoration:none;color:inherit}
+.nr:hover{border-color:var(--warm);background:#fffaf6}
+.nr .ne{font-size:17px}
+.nr .nn{flex:1;font-size:13px;font-weight:700}
+.nr .nc{font-size:11px;color:var(--ink3)}
+.nr .nd{font-size:11.5px;color:var(--warm);font-weight:700}
+#near{max-height:260px;overflow-y:auto}
+.hr{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--ink2);
+ padding:7px 11px;border:1px solid var(--line);border-radius:9px;
+ margin-bottom:5px}
+.hr .hd{font-family:ui-monospace,Consolas,monospace;font-weight:700;
+ color:var(--ink);min-width:64px;font-size:11.5px}
+.hr .hn{flex:1;font-weight:700;color:var(--ink)}
+.hr .hx{border:none;background:none;color:var(--ink3);cursor:pointer}
+.hr .hx:hover{color:var(--red)}
+.addrow{display:flex;gap:7px;margin-top:9px;flex-wrap:wrap}
+.addrow input{flex:1;min-width:110px;border:1px solid var(--line);
+ border-radius:9px;padding:8px 11px;font-size:12.5px;font-family:inherit;
+ outline:none}
+.addrow button{padding:8px 16px;border:none;border-radius:9px;
+ background:var(--ink);color:#fff;font-size:12.5px;font-weight:700;
+ cursor:pointer;font-family:inherit}
+select{border:1px solid var(--line);border-radius:9px;padding:7px 10px;
+ font-family:inherit;font-size:12.5px}
+.tip{font-size:11.5px;color:var(--ink3);line-height:1.7;margin-top:8px}
+footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:28px}
+</style></head><body>
+<div class="wrap">
+<header><h1>뭐 <b>먹지</b></h1>
+<p class="lead">고민하는 시간이 제일 아깝다. 뽑으면 주변 맛집까지 찾아준다.</p>
+<div id="clock"></div></header>
+
+<div class="cols">
+ <div>
+  <div class="card">
+    <div class="ch"><div class="ct">주변 맛집 지도</div>
+      <span class="cs" id="nearinfo">위치를 켜면 뜬다</span></div>
+    <div id="lmap"></div>
+    <div class="addrow" style="margin-top:10px">
+      <select id="rad">
+        <option value="300">300 m</option>
+        <option value="600" selected>600 m</option>
+        <option value="1000">1 km</option>
+        <option value="2000">2 km</option></select>
+      <button id="nearBtn">주변 다시 찾기</button>
+      <button id="mapK" style="background:#fff;color:#5b6472;
+        border:1px solid #eee3da">카카오맵 ↗</button>
+    </div>
+    <div id="near" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <div class="ch"><div class="ct">최근 먹은 것</div>
+      <span class="cs" id="histinfo"></span></div>
+    <div id="hist"></div>
+    <div class="addrow">
+      <input type="text" id="cn" placeholder="목록에 없는 것 추가">
+      <input type="number" id="ck" placeholder="kcal" style="max-width:80px">
+      <button id="cadd">추가</button>
+    </div>
+  </div>
+ </div>
+
+ <div>
+  <div class="stage">
+    <div class="wheelbox"><div class="pin">▼</div>
+      <div id="wheel"></div><div class="hub">뭐먹지</div></div>
+    <div id="slot">?</div>
+    <div id="meta">조건을 고르고 뽑으면 된다</div>
+    <div class="btns">
+      <button class="btn" id="roll">뽑기</button>
+      <button class="btn g" id="again">다시</button>
+      <button class="btn g" id="eat">이걸로 먹음</button>
+    </div>
+  </div>
+  <div class="card" style="margin-top:13px">
+    <div class="lb">언제 <span class="cs" id="autoslot"></span></div>
+    <div class="seg" id="segMeal"></div>
+    <div class="lb">종류</div>
+    <div class="seg" id="segCat"></div>
+    <div class="lb">최근 먹은 것 빼기</div>
+    <div class="seg" id="segSkip"></div>
+    <div class="lb">조건 <span class="cs">겹쳐 누를 수 있다</span></div>
+    <div class="seg" id="segOpt"></div>
+    <div class="pool" id="pool"></div>
+    <div class="cands" id="cands"></div>
+  </div>
+ </div>
+</div>
+<footer>지도는 OpenStreetMap · 가게 정보는 카카오맵에서 본다</footer>
+</div>
+<script>
+const LSH='eat_history', LSC='eat_custom';
+// localStorage 가 막힌 환경에서도 죽지 않게
+const LSget=k=>{try{return localStorage.getItem(k);}catch(e){return null;}};
+const LSset=(k,v)=>{try{localStorage.setItem(k,v);}catch(e){}};
+let HIST=[],CUSTOM=[];
+try{HIST=JSON.parse(LSget(LSH)||'[]');}catch(e){}
+try{CUSTOM=JSON.parse(LSget(LSC)||'[]');}catch(e){}
+// 식단 · 칼로리 페이지에 적은 것도 같이 본다
+function dietEaten(){
+  let D={};
+  try{D=JSON.parse(LSget('diet_log')||'{}');}catch(e){return [];}
+  const out=[];
+  Object.keys(D).sort().reverse().forEach(k=>{
+    (D[k].items||[]).slice().reverse().forEach(x=>{
+      out.push({n:x.n,k:Math.round(x.k*(x.q||1)),m:x.m||'',e:'🍽',
+                d:k.slice(5),t:'',src:'식단'});
+    });
+  });
+  return out;
+}
+function merged(){
+  const a=HIST.map(h=>Object.assign({src:'룰렛'},h));
+  return a.concat(dietEaten()).sort((x,y)=>
+    (y.d+(y.t||'')).localeCompare(x.d+(x.t||'')));
+}
+const M=['아침','점심','저녁','야식'];
+const DB=[
+['김치찌개',400,'점심,저녁','한식','국물,매움','🍲'],
+['된장찌개',280,'아침,점심,저녁','한식','국물,가벼움,저칼로리','🍲'],
+['순두부찌개',350,'아침,점심,저녁','한식','국물,매움','🍲'],
+['부대찌개',500,'점심,저녁','한식','국물,매움,여럿','🍲'],
+['청국장',320,'점심','한식','국물,가벼움','🍲'],
+['비지찌개',300,'점심','한식','국물,저칼로리','🍲'],
+['동태찌개',380,'점심,저녁','한식','국물,해장','🐟'],
+['꽃게탕',450,'저녁','한식','국물,여럿','🦀'],
+['알탕',400,'저녁','한식','국물,해장','🐟'],
+['대구탕',350,'저녁','한식','국물,저칼로리,해장','🐟'],
+['해물탕',450,'저녁','한식','국물,여럿','🦐'],
+['아구탕',420,'저녁','한식','국물,매움','🐟'],
+['미역국',120,'아침','한식','국물,저칼로리,가벼움','🥣'],
+['북엇국',150,'아침','한식','국물,해장,저칼로리','🥣'],
+['콩나물국밥',350,'아침','한식','국물,해장,저칼로리','🍚'],
+['순대국',450,'아침,점심','한식','국물,해장,든든','🍲'],
+['돼지국밥',600,'점심','한식','국물,든든,해장','🍚'],
+['소머리국밥',550,'점심','한식','국물,든든','🍚'],
+['갈비탕',480,'점심,저녁','한식','국물,고기,든든','🍖'],
+['설렁탕',430,'아침,점심,저녁','한식','국물,든든','🍜'],
+['곰탕',420,'점심','한식','국물,든든','🍜'],
+['도가니탕',500,'점심','한식','국물,보양','🍜'],
+['삼계탕',800,'점심,저녁','한식','국물,고기,보양','🍗'],
+['닭곰탕',450,'점심','한식','국물,보양,저칼로리','🍗'],
+['감자탕',600,'저녁','한식','국물,매움,여럿','🍲'],
+['뼈해장국',520,'아침,점심','한식','국물,해장','🍲'],
+['추어탕',400,'점심','한식','국물,보양','🥣'],
+['육개장',380,'점심','한식','국물,매움','🍲'],
+['갈비찜',700,'저녁','한식','고기,여럿','🍖'],
+['찜갈비',720,'저녁','한식','고기,매움,여럿','🍖'],
+['곱창전골',650,'저녁','한식','국물,여럿,회식','🍲'],
+['버섯전골',400,'저녁','한식','국물,채소,저칼로리','🍄'],
+['만두전골',550,'저녁','한식','국물,여럿','🥟'],
+['샤브샤브',500,'저녁','일식','국물,채소,여럿','🍲'],
+['제육볶음',650,'점심,저녁','한식','고기,매움,든든','🐖'],
+['제육덮밥',700,'점심','한식','매움,빠름,든든','🍚'],
+['불고기',520,'점심,저녁','한식','고기,든든','🥩'],
+['불고기덮밥',680,'점심','한식','빠름,든든','🍚'],
+['닭갈비',700,'저녁','한식','고기,매움,여럿','🍗'],
+['찜닭',720,'저녁','한식','고기,여럿','🍗'],
+['닭볶음탕',650,'저녁','한식','매움,여럿','🍗'],
+['삼겹살',740,'저녁','한식','고기,여럿,회식','🥓'],
+['목살',520,'저녁','한식','고기,여럿','🥓'],
+['항정살',600,'저녁','한식','고기,회식','🥓'],
+['소갈비',800,'저녁','한식','고기,회식','🍖'],
+['소고기구이',600,'저녁','한식','고기,여럿,회식','🥩'],
+['차돌박이',650,'저녁','한식','고기,회식','🥩'],
+['막창',620,'저녁','한식','고기,여럿,회식','🍖'],
+['곱창',600,'저녁','한식','고기,여럿,회식','🍖'],
+['대창',700,'저녁','한식','고기,회식','🍖'],
+['닭발',450,'저녁,야식','한식','매움,여럿','🍗'],
+['족발',700,'저녁,야식','한식','고기,여럿','🐷'],
+['보쌈',650,'저녁','한식','고기,여럿','🥬'],
+['수육',550,'저녁','한식','고기,여럿','🥩'],
+['오리고기',600,'저녁','한식','고기,여럿,보양','🦆'],
+['장어구이',600,'저녁','한식','보양,회식','🐟'],
+['고등어구이',380,'점심','한식','가벼움,단백질','🐟'],
+['갈치구이',400,'점심','한식','가벼움,단백질','🐟'],
+['삼치구이',380,'점심','한식','가벼움,단백질','🐟'],
+['생선구이 정식',550,'점심','한식','든든,단백질','🐟'],
+['조개구이',450,'저녁','한식','여럿,회식','🦪'],
+['새우구이',380,'저녁','한식','여럿,단백질','🦐'],
+['가리비',350,'저녁','한식','여럿,저칼로리','🦪'],
+['낙지볶음',450,'저녁','한식','매움,여럿','🐙'],
+['쭈꾸미볶음',480,'저녁','한식','매움,여럿','🐙'],
+['오징어볶음',480,'점심,저녁','한식','매움','🦑'],
+['간장게장',450,'점심','한식','든든','🦀'],
+['양념게장',480,'점심','한식','매움','🦀'],
+['해물찜',600,'저녁','한식','매움,여럿','🦐'],
+['아구찜',550,'저녁','한식','매움,여럿','🐟'],
+['코다리찜',450,'점심','한식','매움','🐟'],
+['비빔밥',600,'점심','한식','든든,채소','🍚'],
+['돌솥비빔밥',650,'점심','한식','든든,채소','🍚'],
+['보리비빔밥',550,'점심','한식','채소,저칼로리','🍚'],
+['육회비빔밥',620,'점심','한식','든든,단백질','🍚'],
+['쌈밥 정식',700,'점심','한식','든든,채소','🥬'],
+['백반 정식',650,'점심','한식','든든','🍱'],
+['구내식당',650,'점심','간편','빠름,싸다','🍱'],
+['김치볶음밥',600,'점심,야식','한식','빠름,매움','🍚'],
+['새우볶음밥',650,'점심','중식','빠름,든든','🍚'],
+['낙지덮밥',620,'점심','한식','매움,든든','🍚'],
+['오징어덮밥',600,'점심','한식','매움,든든','🍚'],
+['돈부리',680,'점심','일식','빠름,든든','🍚'],
+['규동',680,'점심','일식','빠름,든든','🍚'],
+['가츠동',750,'점심','일식','든든','🍚'],
+['연어덮밥',600,'점심','일식','든든','🍣'],
+['참치덮밥',550,'점심','일식','든든','🍣'],
+['장어덮밥',750,'점심','일식','보양,든든','🍣'],
+['회덮밥',550,'점심','일식','가벼움,단백질','🐟'],
+['카레라이스',700,'점심','일식','든든','🍛'],
+['하이라이스',680,'점심','일식','든든','🍛'],
+['오므라이스',700,'점심','일식','든든','🍳'],
+['떡국',450,'아침,점심','한식','국물,가벼움','🍲'],
+['만둣국',480,'점심','한식','국물,가벼움','🥟'],
+['떡만두국',520,'점심','한식','국물,든든','🥟'],
+['칼국수',520,'점심','한식','국물,면','🍜'],
+['바지락칼국수',480,'점심','한식','국물,면,가벼움','🍜'],
+['수제비',450,'점심','한식','국물,면','🍜'],
+['잔치국수',450,'점심','한식','국물,면,가벼움','🍜'],
+['비빔국수',500,'점심','한식','면,매움','🍜'],
+['냉면',550,'점심','한식','면,여름','🍜'],
+['비빔냉면',600,'점심','한식','면,매움,여름','🍜'],
+['막국수',500,'점심','한식','면,여름','🍜'],
+['콩국수',600,'점심','한식','면,여름','🍜'],
+['쫄면',520,'점심','분식','면,매움','🍜'],
+['우동',480,'점심,야식','일식','국물,면,가벼움','🍲'],
+['라멘',650,'점심,저녁','일식','국물,면,든든','🍜'],
+['돈코츠라멘',720,'점심,저녁','일식','국물,면,든든','🍜'],
+['츠케멘',700,'점심','일식','면,든든','🍜'],
+['소바',420,'점심','일식','면,가벼움,저칼로리','🍜'],
+['야키소바',600,'점심','일식','면','🍜'],
+['쌀국수',450,'점심','아시안','국물,면,가벼움','🍜'],
+['분짜',550,'점심','아시안','면,가벼움','🍜'],
+['팟타이',600,'점심,저녁','아시안','면','🍤'],
+['짜장면',700,'점심','중식','면,든든','🍜'],
+['간짜장',720,'점심','중식','면,든든','🍜'],
+['짬뽕',680,'점심','중식','국물,면,매움','🍜'],
+['짬뽕밥',700,'점심','중식','국물,매움,든든','🍚'],
+['울면',600,'점심','중식','국물,면,가벼움','🍜'],
+['기스면',550,'점심','중식','국물,면,가벼움','🍜'],
+['라면',500,'아침,야식','분식','빠름,간단','🍜'],
+['짜파게티',600,'야식','분식','빠름,간단','🍜'],
+['치즈라면',600,'야식','분식','빠름,간단','🧀'],
+['떡라면',600,'야식','분식','빠름,간단','🍜'],
+['비빔면',450,'점심,야식','분식','빠름,매움','🍜'],
+['볶음밥',700,'점심','중식','든든','🍚'],
+['탕수육',600,'저녁','중식','여럿','🍖'],
+['깐풍기',650,'저녁','중식','여럿,매움','🍗'],
+['유린기',600,'저녁','중식','여럿','🍗'],
+['양장피',550,'저녁','중식','여럿,채소','🥗'],
+['마파두부',500,'점심','중식','매움,든든','🌶'],
+['마라탕',700,'점심,저녁','중식','국물,매움','🌶'],
+['마라샹궈',800,'저녁','중식','매움,여럿','🌶'],
+['훠궈',800,'저녁','중식','국물,매움,여럿','🍲'],
+['양꼬치',500,'저녁','중식','고기,여럿,회식','🍢'],
+['꿔바로우',700,'저녁','중식','여럿','🍖'],
+['딤섬',450,'점심','중식','간단','🥟'],
+['만두',450,'점심,야식','중식','간단','🥟'],
+['군만두',480,'야식','중식','간단','🥟'],
+['물만두',380,'점심,야식','중식','간단,가벼움','🥟'],
+['초밥',550,'점심,저녁','일식','가벼움','🍣'],
+['모둠초밥',650,'저녁','일식','회식','🍣'],
+['회',350,'저녁','일식','가벼움,저칼로리,회식','🐟'],
+['물회',400,'점심','일식','가벼움,여름','🐟'],
+['돈까스',850,'점심','일식','든든','🍖'],
+['치즈돈까스',980,'점심','일식','든든','🧀'],
+['생선까스',600,'점심','일식','가벼움','🐟'],
+['고로케',350,'점심','일식','간단','🍖'],
+['타코야키',350,'야식','일식','간단','🐙'],
+['오코노미야키',500,'저녁','일식','여럿','🥞'],
+['가라아게',550,'저녁,야식','일식','여럿','🍗'],
+['야키토리',450,'저녁','일식','여럿,회식','🍢'],
+['파스타 크림',800,'점심,저녁','양식','든든','🍝'],
+['파스타 토마토',600,'점심,저녁','양식','가벼움','🍝'],
+['파스타 오일',650,'점심,저녁','양식','가벼움','🍝'],
+['까르보나라',850,'저녁','양식','든든','🍝'],
+['라자냐',750,'저녁','양식','든든','🧀'],
+['리조또',700,'저녁','양식','든든','🍚'],
+['피자',560,'저녁,야식','양식','여럿','🍕'],
+['햄버거',550,'점심','양식','빠름,간단','🍔'],
+['수제버거',750,'점심,저녁','양식','든든','🍔'],
+['핫도그',400,'점심,야식','양식','빠름,간단','🌭'],
+['샌드위치',400,'아침,점심','양식','빠름,간단,가벼움','🥪'],
+['파니니',480,'점심','양식','간단','🥪'],
+['샐러드',250,'아침,점심','양식','저칼로리,가벼움,채소','🥗'],
+['포케',450,'점심','양식','저칼로리,채소,단백질','🥗'],
+['스테이크',700,'저녁','양식','고기,회식','🥩'],
+['바비큐 립',800,'저녁','양식','고기,여럿','🍖'],
+['부리또',600,'점심','양식','든든','🌯'],
+['타코',450,'점심,저녁','양식','간단','🌮'],
+['케밥',550,'점심,야식','양식','간단,빠름','🌯'],
+['치킨',800,'저녁,야식','양식','고기,여럿','🍗'],
+['양념치킨',900,'저녁,야식','양식','고기,매움,여럿','🍗'],
+['간장치킨',850,'저녁,야식','양식','고기,여럿','🍗'],
+['파닭',880,'저녁,야식','양식','고기,여럿','🍗'],
+['닭강정',700,'야식','양식','간단,여럿','🍗'],
+['치킨버거',600,'점심','양식','빠름,간단','🍔'],
+['피쉬앤칩스',700,'저녁','양식','여럿','🍟'],
+['김밥',480,'아침,점심','분식','빠름,간단','🍙'],
+['참치김밥',520,'점심','분식','빠름,간단','🍙'],
+['치즈김밥',540,'점심','분식','빠름,간단','🧀'],
+['충무김밥',420,'점심','분식','빠름,간단','🍙'],
+['떡볶이',480,'점심,야식','분식','매움,간단','🌶'],
+['로제떡볶이',600,'저녁,야식','분식','매움,간단','🌶'],
+['국물떡볶이',500,'야식','분식','매움,국물','🌶'],
+['순대',400,'점심,야식','분식','간단','🌭'],
+['튀김 모둠',500,'점심,야식','분식','간단','🍤'],
+['어묵',250,'야식','분식','국물,간단,저칼로리','🍢'],
+['핫바',180,'야식','간편','빠름,간단','🌭'],
+['파전',600,'저녁','한식','여럿,회식','🥞'],
+['김치전',500,'저녁','한식','여럿','🥞'],
+['해물파전',650,'저녁','한식','여럿,회식','🥞'],
+['부추전',450,'저녁','한식','여럿','🥞'],
+['감자전',480,'저녁','한식','여럿','🥞'],
+['두부김치',400,'저녁','건강','단백질','🍢'],
+['골뱅이무침',450,'저녁','한식','매움,여럿,회식','🐚'],
+['계란말이',320,'저녁','한식','단백질,간단','🍳'],
+['나가사키짬뽕',600,'저녁','일식','국물,여럿','🍜'],
+['월남쌈',500,'저녁','아시안','채소,여럿,저칼로리','🥬'],
+['카오팟',600,'점심','아시안','든든','🍚'],
+['나시고랭',620,'점심','아시안','든든','🍚'],
+['똠양꿍',400,'저녁','아시안','국물,매움','🍲'],
+['그린커리',600,'점심,저녁','아시안','매움','🍛'],
+['반미',450,'점심','아시안','빠름,간단','🥪'],
+['닭가슴살 도시락',450,'점심','건강','저칼로리,단백질','🍱'],
+['샐러드 도시락',350,'점심','건강','저칼로리,채소','🥗'],
+['닭가슴살 샐러드',380,'점심,저녁','건강','저칼로리,단백질,채소','🥗'],
+['연어 샐러드',420,'점심','건강','단백질,채소','🥗'],
+['두부 샐러드',300,'점심','건강','저칼로리,단백질,채소','🥗'],
+['그릭요거트',120,'아침','건강','저칼로리,빠름','🥛'],
+['오트밀',300,'아침','건강','저칼로리,빠름','🥣'],
+['고구마+계란',280,'아침','건강','저칼로리,빠름,단백질','🍠'],
+['바나나+우유',220,'아침','건강','빠름,저칼로리','🍌'],
+['프로틴셰이크',150,'아침','건강','저칼로리,빠름,단백질','🥤'],
+['미숫가루',250,'아침','건강','빠름','🥤'],
+['과일',120,'아침','건강','저칼로리,빠름','🍎'],
+['샐러드랩',400,'점심','건강','저칼로리,채소','🌯'],
+['현미밥+반찬',550,'점심','건강','든든,채소','🍚'],
+['닭가슴살 볶음밥',520,'점심','건강','단백질,든든','🍚'],
+['편의점 도시락',700,'점심,야식','간편','빠름,간단','🍱'],
+['컵라면',350,'야식','간편','빠름,간단','🍜'],
+['삼각김밥',180,'아침','간편','빠름,간단,저칼로리','🍙'],
+['편의점 샌드위치',350,'아침','간편','빠름,간단','🥪'],
+['닭꼬치',350,'야식','간편','간단,단백질','🍢'],
+['샐러드컵',200,'점심','간편','저칼로리,빠름,채소','🥗'],
+['빵+우유',400,'아침','간편','빠름,간단','🍞'],
+['토스트',380,'아침','간편','빠름,간단','🍞'],
+['베이글',350,'아침','간편','빠름,간단','🥯'],
+['크로플',420,'아침','간편','간단','🧇'],
+];
+const CATS=['한식','중식','일식','양식','분식','아시안','건강','간편'];
+const OPTS=['국물','고기','면','매움','가벼움','저칼로리','빠름','여럿',
+ '해장','채소','단백질','든든'];
+let selMeal='',selCat=new Set(),selOpt=new Set(),last=null;
+let SKIP=+(LSget('eat_skip')??5);
+let LOC=null,LMAP=null,LAYER=null;
+function el(i){return document.getElementById(i);}
+function autoMeal(){const h=new Date().getHours();
+  return h<10?'아침':h<15?'점심':h<21?'저녁':'야식';}
+selMeal=autoMeal();
+el('autoslot').textContent='지금은 '+selMeal;
+
+function seg(box,list,set,cls){
+  list.forEach(n=>{
+    const b=document.createElement('button');
+    b.className='sg'+(cls?' '+cls:'');b.textContent=n;
+    b.onclick=()=>{
+      if(set==='meal'){selMeal=(selMeal===n?'':n);
+        box.querySelectorAll('.sg').forEach(x=>x.classList.remove('on'));
+        if(selMeal===n)b.classList.add('on');
+      }else{if(set.has(n))set.delete(n);else set.add(n);
+        b.classList.toggle('on',set.has(n));}
+      pool();
+    };
+    if(set==='meal'&&n===selMeal)b.classList.add('on');
+    box.appendChild(b);
+  });
+}
+seg(el('segMeal'),M,'meal');
+seg(el('segCat'),CATS,selCat,'gr');
+seg(el('segOpt'),OPTS,selOpt,'bl');
+[['안 뺌',0],['3끼',3],['5끼',5],['10끼',10],['20끼',20]].forEach(([n,v])=>{
+  const b=document.createElement('button');
+  b.className='sg'+(SKIP===v?' on':'');b.textContent=n;
+  b.onclick=()=>{SKIP=v;LSset('eat_skip',v);
+    el('segSkip').querySelectorAll('.sg').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');pool();};
+  el('segSkip').appendChild(b);
+});
+
+function all(){return DB.concat(CUSTOM.map(c=>[c.n,c.k,'','직접','','🍽']));}
+function pick(){
+  const recent=SKIP?merged().slice(0,SKIP).map(h=>h.n):[];
+  let list=all().filter(f=>{
+    if(selMeal&&f[2]&&!f[2].split(',').includes(selMeal))return false;
+    if(selCat.size&&!selCat.has(f[3]))return false;
+    if(selOpt.size){const tg=(f[4]||'').split(',');
+      for(const o of selOpt)if(!tg.includes(o))return false;}
+    return true;
+  });
+  if(!list.length)return null;
+  const fresh=list.filter(f=>!recent.includes(f[0]));
+  return fresh.length?fresh:list;
+}
+function pool(){
+  const l=pick();
+  el('pool').textContent=l?('후보 '+l.length+' 개'+
+    (SKIP?'　·　최근 '+Math.min(SKIP,merged().length)+' 끼 제외':'')):
+    '조건에 맞는 게 없다. 조건을 풀어라.';
+  el('cands').innerHTML=l?l.slice(0,16).map(f=>
+    '<span class="cd">'+(f[5]||'')+' '+f[0]+'</span>').join(''):'';
+  drawWheel(l||[]);
+}
+const COL=['#fde8d8','#fff3e6','#ffe4d1','#fff7f0','#fdead9','#fff1e4',
+ '#ffe9da','#fff5ec'];
+let ANG=0,FACE=[];
+function drawWheel(list){
+  const w=el('wheel');
+  FACE=list.slice().sort(()=>Math.random()-0.5).slice(0,8);
+  const n=Math.max(1,FACE.length);
+  const deg=360/n;
+  w.style.background='conic-gradient('+Array.from({length:n},(_,i)=>
+    COL[i%COL.length]+' '+(i*deg)+'deg '+((i+1)*deg)+'deg').join(',')+')';
+  w.innerHTML=Array.from({length:n},(_,i)=>
+    '<div class="sl" style="transform:rotate('+(i*deg)+'deg)"><span>'+
+    ((FACE[i]&&FACE[i][5])||'🍽')+'</span></div>').join('');
+}
+function roll(){
+  if(!FACE.length){el('slot').innerHTML='—';return;}
+  const n=FACE.length,deg=360/n;
+  const idx=Math.floor(Math.random()*n);
+  const f=FACE[idx];
+  ANG+=360*6-((ANG%360)+idx*deg+deg/2);
+  el('wheel').style.transform='rotate('+ANG+'deg)';
+  el('slot').innerHTML='<span class="emo">🎲</span>';
+  el('meta').textContent='';
+  setTimeout(()=>{
+    last=f;
+    el('slot').innerHTML='<span class="emo">'+(f[5]||'')+'</span>'+f[0];
+    el('meta').innerHTML='<span class="kc">'+f[1]+' kcal</span>'+
+      (f[3]?'　·　'+f[3]:'')+(f[4]?'　·　'+f[4].split(',').join(' · '):'');
+    nearby();
+  },4100);
+}
+el('roll').onclick=roll;
+el('again').onclick=roll;
+el('eat').onclick=()=>{
+  if(!last)return;
+  const d=new Date();
+  HIST.unshift({n:last[0],k:last[1],m:selMeal||autoMeal(),e:last[5]||'',
+    d:d.toISOString().slice(5,10),
+    t:String(d.getHours()).padStart(2,'0')+':'+
+      String(d.getMinutes()).padStart(2,'0')});
+  HIST=HIST.slice(0,100);
+  LSset(LSH,JSON.stringify(HIST));
+  hist();pool();
+  const b=el('eat');b.textContent='기록했다';
+  setTimeout(()=>b.textContent='이걸로 먹음',1200);
+};
+function hist(){
+  const all=merged();
+  const nd=all.length-HIST.length;
+  el('histinfo').textContent=all.length+' 개'+(nd?'　(식단 '+nd+')':'');
+  el('hist').innerHTML=all.slice(0,12).map(h=>
+    '<div class="hr"><span class="hd">'+h.d+' '+(h.t||'')+'</span>'+
+    '<span class="hn">'+(h.e||'')+' '+h.n+'</span>'+
+    (h.src==='식단'?'<span class="nc">식단</span>':'')+
+    '<span>'+h.k+'</span>'+
+    (h.src==='룰렛'?'<button class="hx" data-n="'+
+      encodeURIComponent(h.n)+'">✕</button>':'')+'</div>'
+  ).join('')||'<div class="tip">아직 없다. 뽑고 「이걸로 먹음」 을 누르거나 '+
+    '식단 페이지에 적으면 여기 쌓인다.</div>';
+  el('hist').querySelectorAll('.hx').forEach(b=>b.onclick=()=>{
+    const n=decodeURIComponent(b.dataset.n);
+    const i=HIST.findIndex(h=>h.n===n);
+    if(i>=0)HIST.splice(i,1);
+    LSset(LSH,JSON.stringify(HIST));hist();pool();});
+}
+el('cadd').onclick=()=>{
+  const n=el('cn').value.trim(),k=+el('ck').value||0;
+  if(!n)return;
+  CUSTOM.push({n:n,k:k});
+  LSset(LSC,JSON.stringify(CUSTOM));
+  el('cn').value='';el('ck').value='';pool();
+};
+// ── 지도 ──────────────────────────────────────
+const KKEY='943c6dbf693c303fc47b5d1856d46da5';
+const USEK=location.protocol==='http:'||location.protocol==='https:';
+let KMAP=null,KMARK=[],KREADY=false;
+function loadKakao(){
+  const s=document.createElement('script');
+  s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+KKEY+
+        '&libraries=services&autoload=false';
+  s.onerror=()=>{initMap();};
+  s.onload=()=>kakao.maps.load(()=>{
+    KREADY=true;
+    KMAP=new kakao.maps.Map(el('lmap'),{
+      center:new kakao.maps.LatLng(LOC?LOC.latitude:37.2939,
+                                   LOC?LOC.longitude:126.9769),level:4});
+    el('nearinfo').textContent='카카오맵';
+    if(LOC)kakaoSearch();
+  });
+  document.head.appendChild(s);
+}
+function kakaoSearch(){
+  if(!KREADY)return false;
+  const ps=new kakao.maps.services.Places();
+  const kw=(last?last[0]:'맛집');
+  ps.keywordSearch(kw,(data,st)=>{
+    if(st!==kakao.maps.services.Status.OK){
+      el('near').innerHTML='<div class="tip">주변에 '+kw+' 가 없다. '+
+        '다른 메뉴로 뽑아보라.</div>';return;}
+    KMARK.forEach(m=>m.setMap(null));KMARK=[];
+    const b=new kakao.maps.LatLngBounds(),rows=[];
+    data.slice(0,20).forEach(d=>{
+      const pos=new kakao.maps.LatLng(d.y,d.x);
+      const mk=new kakao.maps.Marker({map:KMAP,position:pos});
+      const iw=new kakao.maps.InfoWindow({content:
+        '<div style="padding:6px 10px;font-size:12px">'+d.place_name+'</div>'});
+      kakao.maps.event.addListener(mk,'click',()=>iw.open(KMAP,mk));
+      KMARK.push(mk);b.extend(pos);
+      rows.push('<a class="nr" target="_blank" href="'+d.place_url+'">'+
+        '<span class="ne">📍</span><span class="nn">'+d.place_name+'</span>'+
+        '<span class="nc">'+(d.category_name||'').split('>').pop().trim()+
+        '</span><span class="nd">'+(d.distance?d.distance+' m':'')+'</span></a>');
+    });
+    KMAP.setBounds(b);
+    el('nearinfo').textContent=rows.length+' 곳 · 카카오맵';
+    el('near').innerHTML=rows.join('');
+  },{location:LOC?new kakao.maps.LatLng(LOC.latitude,LOC.longitude):null,
+     radius:+el('rad').value,sort:kakao.maps.services.SortBy.DISTANCE});
+  return true;
+}
+function initMap(){
+  if(USEK){if(!KMAP&&!KREADY)loadKakao();return;}
+  if(LMAP||typeof L==='undefined')return;
+  const c=LOC?[LOC.latitude,LOC.longitude]:[37.2939,126.9769];
+  LMAP=L.map('lmap').setView(c,16);
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {maxZoom:19,attribution:'© OpenStreetMap'}).addTo(LMAP);
+  LAYER=L.layerGroup().addTo(LMAP);
+  if(LOC)L.circleMarker(c,{radius:8,color:'#c2410c',fillColor:'#c2410c',
+    fillOpacity:.9}).addTo(LMAP).bindPopup('내 위치');
+}
+function locate(){
+  if(!navigator.geolocation){el('nearinfo').textContent='위치 기능이 없다';
+    initMap();return;}
+  el('nearinfo').textContent='위치 확인 중…';
+  navigator.geolocation.getCurrentPosition(p=>{
+    LOC=p.coords;initMap();
+    if(LMAP){LMAP.setView([LOC.latitude,LOC.longitude],16);
+      L.circleMarker([LOC.latitude,LOC.longitude],{radius:8,color:'#c2410c',
+        fillColor:'#c2410c',fillOpacity:.9}).addTo(LMAP).bindPopup('내 위치');}
+    if(KMAP)KMAP.setCenter(new kakao.maps.LatLng(LOC.latitude,LOC.longitude));
+    el('nearinfo').textContent='위치 확인됨';
+    nearby();
+  },()=>{el('nearinfo').textContent='위치를 못 잡았다 (자물쇠 → 위치 허용)';
+    initMap();},{enableHighAccuracy:true,timeout:8000,maximumAge:300000});
+}
+function dist(a,b,c,d){
+  const R=6371000,r=Math.PI/180;
+  const x=(c-a)*r,y=(d-b)*r*Math.cos((a+c)/2*r);
+  return Math.round(Math.sqrt(x*x+y*y)*R);
+}
+const CUIS={korean:'한식',japanese:'일식',chinese:'중식',italian:'양식',
+ pizza:'피자',burger:'버거',chicken:'치킨',noodle:'면',sushi:'초밥',
+ ramen:'라멘',thai:'아시안',vietnamese:'아시안',asian:'아시안',
+ barbecue:'고기',seafood:'해물',cafe:'카페',bakery:'빵'};
+function nearby(){
+  if(!LOC){locate();return;}
+  if(USEK&&kakaoSearch())return;
+  const r=+el('rad').value;
+  el('near').innerHTML='<div class="tip">찾는 중…</div>';
+  const q='[out:json][timeout:25];(node["amenity"~"restaurant|fast_food"]'+
+    '(around:'+r+','+LOC.latitude+','+LOC.longitude+'););out body 60;';
+  const SRV=['https://overpass-api.de/api/interpreter',
+             'https://overpass.kumi.systems/api/interpreter',
+             'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+  const tryFetch=i=>fetch(SRV[i]+'?data='+encodeURIComponent(q))
+    .then(x=>{if(!x.ok)throw 0;return x.json();})
+    .catch(e=>{if(i+1<SRV.length)return tryFetch(i+1);throw e;});
+  tryFetch(0)
+   .then(j=>{
+     const want=last?last[0]:'';
+     const list=(j.elements||[]).filter(e=>e.tags&&e.tags.name).map(e=>({
+       n:e.tags.name,
+       c:CUIS[(e.tags.cuisine||'').split(';')[0]]||e.tags.cuisine||'',
+       d:dist(LOC.latitude,LOC.longitude,e.lat,e.lon),
+       lat:e.lat,lon:e.lon
+     }));
+     list.forEach(x=>{x.hit=!!(want&&(x.n.includes(want)||
+       (last&&last[3]&&x.c===last[3])));});
+     list.sort((a,b)=>(b.hit-a.hit)||(a.d-b.d));
+     const top=list.slice(0,25);
+     el('nearinfo').textContent=top.length+' 곳 · 반경 '+
+       (r>=1000?(r/1000)+' km':r+' m');
+     el('near').innerHTML=top.map(x=>
+       '<a class="nr" target="_blank" href="https://map.kakao.com/?q='+
+       encodeURIComponent(x.n)+'"><span class="ne">'+(x.hit?'⭐':'📍')+
+       '</span><span class="nn">'+x.n+'</span>'+
+       (x.c?'<span class="nc">'+x.c+'</span>':'')+
+       '<span class="nd">'+x.d+' m</span></a>').join('')||
+       '<div class="tip">이 반경에 등록된 식당이 없다. 반경을 넓혀보라.</div>';
+     if(LMAP&&LAYER){
+       LAYER.clearLayers();
+       const pts=[];
+       top.forEach(x=>{pts.push([x.lat,x.lon]);
+         L.marker([x.lat,x.lon]).addTo(LAYER).bindPopup('<b>'+x.n+'</b>'+
+           (x.c?'<br>'+x.c:'')+'<br>'+x.d+' m<br>'+
+           '<a href="https://map.kakao.com/?q='+encodeURIComponent(x.n)+
+           '" target="_blank">카카오맵에서 보기 ↗</a>');});
+       if(LOC)pts.push([LOC.latitude,LOC.longitude]);
+       if(pts.length)LMAP.fitBounds(pts,{padding:[28,28]});
+     }
+   })
+   .catch(()=>{el('near').innerHTML=
+     '<div class="tip"><b>목록을 못 불러왔다.</b> OpenStreetMap 공개 서버가 '+
+     '가끔 막힌다.<br>「주변 다시 찾기」 를 한 번 더 누르거나, '+
+     '<b>바탕화면 「뭐먹지 (지도)」 로 열면</b> 카카오맵으로 안정적으로 뜬다.</div>';
+     el('nearinfo').textContent='조회 실패';});
+}
+el('nearBtn').onclick=()=>{LOC?nearby():locate();};
+el('mapK').onclick=()=>{
+  const nm=last?last[0]:'맛집';
+  window.open('https://map.kakao.com/?q='+encodeURIComponent(nm),'_blank');
+};
+setInterval(()=>{
+  const d=new Date();
+  el('clock').textContent=String(d.getHours()).padStart(2,'0')+':'+
+    String(d.getMinutes()).padStart(2,'0')+' · '+autoMeal()+' 시간';
+},1000);
+hist();pool();initMap();locate();
+</script>
+</body></html>
