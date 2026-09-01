@@ -19,7 +19,19 @@ h1 b{color:var(--warm)}
 .lead{margin:0;color:var(--ink2);font-size:13px}
 #clock{color:var(--ink3);font-size:12.5px;margin-top:5px}
 .cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-@media(max-width:900px){.cols{grid-template-columns:1fr}}
+@media(max-width:900px){
+ .cols{grid-template-columns:1fr;display:flex;flex-direction:column}
+ .colR{display:contents}          /* 룰렛 · 필터를 각각 독립 항목으로 */
+ .colL{display:contents}
+ .stage{order:1}                  /* 룰렛 맨 위 */
+ .filters{order:2}                /* 끼니 · 종류 · 조건 */
+ .mapcard{order:3}                /* 주변 맛집 지도 */
+ .histcard{order:4}               /* 최근 먹은 것 */
+ .wheelbox{width:220px;height:220px}
+ #slot{font-size:23px}
+ .emo{font-size:42px}
+ #lmap{height:280px}
+}
 .card{background:#fff;border:1px solid var(--line);border-radius:16px;
  padding:17px 19px;margin-bottom:13px;box-shadow:0 1px 3px rgba(21,25,34,.05)}
 .ch{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
@@ -104,8 +116,8 @@ footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:28px}
 <div id="clock"></div></header>
 
 <div class="cols">
- <div>
-  <div class="card">
+ <div class="colL">
+  <div class="card mapcard">
     <div class="ch"><div class="ct">주변 맛집 지도</div>
       <span class="cs" id="nearinfo">위치를 켜면 뜬다</span></div>
     <div id="lmap"></div>
@@ -121,7 +133,7 @@ footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:28px}
     </div>
     <div id="near" style="margin-top:10px"></div>
   </div>
-  <div class="card">
+  <div class="card histcard">
     <div class="ch"><div class="ct">최근 먹은 것</div>
       <span class="cs" id="histinfo"></span></div>
     <div id="hist"></div>
@@ -133,7 +145,7 @@ footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:28px}
   </div>
  </div>
 
- <div>
+ <div class="colR">
   <div class="stage">
     <div class="wheelbox"><div class="pin">▼</div>
       <div id="wheel"></div><div class="hub">뭐먹지</div></div>
@@ -145,7 +157,7 @@ footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:28px}
       <button class="btn g" id="eat">이걸로 먹음</button>
     </div>
   </div>
-  <div class="card" style="margin-top:13px">
+  <div class="card filters" style="margin-top:13px">
     <div class="lb">언제 <span class="cs" id="autoslot"></span></div>
     <div class="seg" id="segMeal"></div>
     <div class="lb">종류</div>
