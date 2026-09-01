@@ -588,14 +588,14 @@ function loadKakao(){
 function kakaoSearch(){
   if(!KREADY)return false;
   const ps=new kakao.maps.services.Places();
-  const kw=(last?last[0]:'맛집');
-  ps.keywordSearch(kw,(data,st)=>{
+  const kw=(last?last[0]:'');
+  const done=(data,st)=>{
     if(st!==kakao.maps.services.Status.OK){
-      el('near').innerHTML='<div class="tip">주변에 '+kw+' 가 없다. '+
-        '다른 메뉴로 뽑아보라.</div>';return;}
+      el('near').innerHTML='<div class="tip">주변에서 못 찾았다. '+
+        '반경을 넓혀보라.</div>';return;}
     KMARK.forEach(m=>m.setMap(null));KMARK=[];
     const b=new kakao.maps.LatLngBounds(),rows=[];
-    data.slice(0,20).forEach(d=>{
+    data.slice(0,30).forEach(d=>{
       const pos=new kakao.maps.LatLng(d.y,d.x);
       const mk=new kakao.maps.Marker({map:KMAP,position:pos});
       const iw=new kakao.maps.InfoWindow({content:
@@ -610,8 +610,18 @@ function kakaoSearch(){
     KMAP.setBounds(b);
     el('nearinfo').textContent=rows.length+' 곳 · 카카오맵';
     el('near').innerHTML=rows.join('');
-  },{location:LOC?new kakao.maps.LatLng(LOC.latitude,LOC.longitude):null,
-     radius:+el('rad').value,sort:kakao.maps.services.SortBy.DISTANCE});
+  };
+  const opt={location:LOC?new kakao.maps.LatLng(LOC.latitude,LOC.longitude):null,
+     radius:+el('rad').value,sort:kakao.maps.services.SortBy.DISTANCE};
+  if(kw){
+    // 뽑힌 메뉴로 먼저 찾고, 없으면 음식점 전체로
+    ps.keywordSearch(kw,(d,s)=>{
+      if(s===kakao.maps.services.Status.OK&&d.length)done(d,s);
+      else ps.categorySearch('FD6',done,opt);
+    },opt);
+  }else{
+    ps.categorySearch('FD6',done,opt);
+  }
   return true;
 }
 function initMap(){
@@ -718,6 +728,8 @@ setInterval(()=>{
   el('clock').textContent=String(d.getHours()).padStart(2,'0')+':'+
     String(d.getMinutes()).padStart(2,'0')+' · '+autoMeal()+' 시간';
 },1000);
-hist();pool();initMap();locate();
+hist();pool();
+if(USEK){loadKakao();}else{initMap();}
+locate();
 </script>
 </body></html>
