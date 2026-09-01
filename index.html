@@ -213,7 +213,7 @@ function merged(){
   return a.concat(dietEaten()).sort((x,y)=>
     (y.d+(y.t||'')).localeCompare(x.d+(x.t||'')));
 }
-const M=['아침','점심','저녁','야식'];
+const M=['아침','점심','저녁','간식 (야식)'];
 const DB=[
 ['김치찌개',400,'점심,저녁','한식','국물,매움','🍲'],
 ['된장찌개',280,'아침,점심,저녁','한식','국물,가벼움,저칼로리','🍲'],
@@ -453,7 +453,7 @@ let SKIP=+(LSget('eat_skip')??5);
 let LOC=null,LMAP=null,LAYER=null;
 function el(i){return document.getElementById(i);}
 function autoMeal(){const h=new Date().getHours();
-  return h<10?'아침':h<15?'점심':h<21?'저녁':'야식';}
+  return h<10?'아침':h<15?'점심':h<21?'저녁':'간식 (야식)';}
 selMeal=autoMeal();
 el('autoslot').textContent='지금은 '+selMeal;
 
@@ -489,7 +489,10 @@ function all(){return DB.concat(CUSTOM.map(c=>[c.n,c.k,'','직접','','🍽']));
 function pick(){
   const recent=SKIP?merged().slice(0,SKIP).map(h=>h.n):[];
   let list=all().filter(f=>{
-    if(selMeal&&f[2]&&!f[2].split(',').includes(selMeal))return false;
+    if(selMeal&&f[2]){
+      const key=selMeal==='간식 (야식)'?'야식':selMeal;
+      if(!f[2].split(',').includes(key))return false;
+    }
     if(selCat.size&&!selCat.has(f[3]))return false;
     if(selOpt.size){const tg=(f[4]||'').split(',');
       for(const o of selOpt)if(!tg.includes(o))return false;}
