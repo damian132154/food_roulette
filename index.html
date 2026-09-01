@@ -622,6 +622,11 @@ function initMap(){
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     {maxZoom:19,attribution:'© OpenStreetMap'}).addTo(LMAP);
   LAYER=L.layerGroup().addTo(LMAP);
+  // 접혔다 펴지거나 폭이 바뀌면 타일이 비어 보인다 — 크기를 다시 잡는다
+  const fix=()=>{try{LMAP.invalidateSize();}catch(e){}};
+  setTimeout(fix,120);setTimeout(fix,500);setTimeout(fix,1200);
+  window.addEventListener('resize',fix);
+  if(window.ResizeObserver)new ResizeObserver(fix).observe(el('lmap'));
   if(LOC)L.circleMarker(c,{radius:8,color:'#c2410c',fillColor:'#c2410c',
     fillOpacity:.9}).addTo(LMAP).bindPopup('내 위치');
 }
@@ -693,6 +698,7 @@ function nearby(){
            '<a href="https://map.kakao.com/?q='+encodeURIComponent(x.n)+
            '" target="_blank">카카오맵에서 보기 ↗</a>');});
        if(LOC)pts.push([LOC.latitude,LOC.longitude]);
+       try{LMAP.invalidateSize();}catch(e){}
        if(pts.length)LMAP.fitBounds(pts,{padding:[28,28]});
      }
    })
