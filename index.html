@@ -580,8 +580,14 @@ function loadKakao(){
     KMAP=new kakao.maps.Map(el('lmap'),{
       center:new kakao.maps.LatLng(LOC?LOC.latitude:37.2939,
                                    LOC?LOC.longitude:126.9769),level:4});
-    el('nearinfo').textContent='카카오맵';
-    if(LOC)kakaoSearch();
+    const rl=()=>{try{KMAP.relayout();}catch(e){}};
+    setTimeout(rl,150);setTimeout(rl,600);setTimeout(rl,1500);
+    window.addEventListener('resize',rl);
+    if(window.ResizeObserver)new ResizeObserver(rl).observe(el('lmap'));
+    el('nearinfo').textContent='카카오맵 준비됨';
+    try{KMAP.relayout();}catch(e){}
+    if(LOC){KMAP.setCenter(new kakao.maps.LatLng(LOC.latitude,LOC.longitude));
+      kakaoSearch();}
   });
   document.head.appendChild(s);
 }
@@ -664,9 +670,18 @@ const CUIS={korean:'한식',japanese:'일식',chinese:'중식',italian:'양식',
  pizza:'피자',burger:'버거',chicken:'치킨',noodle:'면',sushi:'초밥',
  ramen:'라멘',thai:'아시안',vietnamese:'아시안',asian:'아시안',
  barbecue:'고기',seafood:'해물',cafe:'카페',bakery:'빵'};
+let waitN=0;
 function nearby(){
   if(!LOC){locate();return;}
-  if(USEK&&kakaoSearch())return;
+  if(USEK){
+    if(kakaoSearch()){waitN=0;return;}
+    if(waitN<20){                      // 카카오 SDK 가 붙을 때까지 기다린다
+      waitN++;
+      el('near').innerHTML='<div class="tip">지도 준비 중…</div>';
+      setTimeout(nearby,400);return;
+    }
+    el('nearinfo').textContent='카카오 실패 — OSM 으로 대체';
+  }
   const r=+el('rad').value;
   el('near').innerHTML='<div class="tip">찾는 중…</div>';
   const q='[out:json][timeout:25];(node["amenity"~"restaurant|fast_food"]'+
@@ -674,9 +689,14 @@ function nearby(){
   const SRV=['https://overpass-api.de/api/interpreter',
              'https://overpass.kumi.systems/api/interpreter',
              'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
-  const tryFetch=i=>fetch(SRV[i]+'?data='+encodeURIComponent(q))
-    .then(x=>{if(!x.ok)throw 0;return x.json();})
-    .catch(e=>{if(i+1<SRV.length)return tryFetch(i+1);throw e;});
+  const tryFetch=i=>{
+    const ac=new AbortController();
+    const to=setTimeout(()=>ac.abort(),8000);
+    return fetch(SRV[i]+'?data='+encodeURIComponent(q),{signal:ac.signal})
+      .then(x=>{clearTimeout(to);if(!x.ok)throw 0;return x.json();})
+      .catch(e=>{clearTimeout(to);
+        if(i+1<SRV.length)return tryFetch(i+1);throw e;});
+  };
   tryFetch(0)
    .then(j=>{
      const want=last?last[0]:'';
