@@ -9,8 +9,6 @@
 <meta name="apple-mobile-web-app-title" content="뭐먹지">
 <link rel="apple-touch-icon" href="icon.svg">
 <link rel="icon" href="icon.svg">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 :root{--bg:#fdf9f6;--card:#fff;--ink:#151922;--ink2:#5b6472;--ink3:#98a0ac;
 --line:#eee3da;--warm:#c2410c;--green:#0f766e;--blue:#2563eb;--red:#dc2626}
@@ -37,7 +35,6 @@ h1 b{color:var(--warm)}
  .wheelbox{width:220px;height:220px}
  #slot{font-size:23px}
  .emo{font-size:42px}
- #lmap{height:280px}
  /* 카드 폭 · 여백을 전부 같게 */
  .cols{gap:12px;align-items:stretch}
  .card,.stage{width:100%;max-width:100%;margin:0 0 12px;box-sizing:border-box;
@@ -51,8 +48,6 @@ h1 b{color:var(--warm)}
 .ch{display:flex;align-items:center;gap:8px;margin-bottom:11px;flex-wrap:wrap}
 .ct{font-size:14px;font-weight:800}
 .cs{font-size:11.5px;color:var(--ink3);margin-left:auto}
-#lmap{width:100%;height:330px;border-radius:12px;border:1px solid var(--line);
- background:#eef1f5}
 .stage{background:#fff;border:1px solid var(--line);border-radius:18px;
  padding:20px 18px;text-align:center;box-shadow:0 4px 20px rgba(194,65,12,.07)}
 .wheelbox{position:relative;width:250px;height:250px;margin:0 auto 8px}
@@ -132,21 +127,18 @@ footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:28px}
 <div class="cols">
  <div class="colL">
   <div class="card mapcard">
-    <div class="ch"><div class="ct">주변 맛집 지도</div>
-      <span class="cs" id="nearinfo">위치를 켜면 뜬다</span></div>
-    <div id="lmap"></div>
-    <div class="addrow" style="margin-top:10px">
-      <select id="rad">
-        <option value="300">300 m</option>
-        <option value="600" selected>600 m</option>
-        <option value="1000">1 km</option>
-        <option value="2000">2 km</option></select>
-      <button id="nearBtn">주변 다시 찾기</button>
-      <button id="mapK" style="background:#fff;color:#5b6472;
-        border:1px solid #eee3da">카카오맵 ↗</button>
+    <div class="ch"><div class="ct">주변에서 찾기</div>
+      <span class="cs" id="nearinfo"></span></div>
+    <div id="pickname" style="font-size:19px;font-weight:800;
+      margin-bottom:12px;color:var(--warm)">먼저 뽑아라</div>
+    <div class="btns" style="margin-top:0;justify-content:flex-start">
+      <button class="btn" id="mapK">카카오맵으로 찾기</button>
+      <button class="btn g" id="mapN">네이버지도</button>
     </div>
-    <div id="near" style="margin-top:10px"></div>
+    <div class="tip">뽑으면 그 메뉴로 주변 가게를 바로 검색한다.
+      폰이면 앱이 열린다.</div>
   </div>
+
   <div class="card histcard">
     <div class="ch"><div class="ct">최근 먹은 것</div>
       <span class="cs" id="histinfo"></span></div>
@@ -544,7 +536,7 @@ function roll(){
     el('slot').innerHTML='<span class="emo">'+(f[5]||'')+'</span>'+f[0];
     el('meta').innerHTML='<span class="kc">'+f[1]+' kcal</span>'+
       (f[3]?'　·　'+f[3]:'')+(f[4]?'　·　'+f[4].split(',').join(' · '):'');
-    nearby();
+    el('pickname').textContent=(f[5]||'')+' '+f[0];
   },4100);
 }
 el('roll').onclick=roll;
@@ -588,190 +580,35 @@ el('cadd').onclick=()=>{
   LSset(LSC,JSON.stringify(CUSTOM));
   el('cn').value='';el('ck').value='';pool();
 };
-// ── 지도 ──────────────────────────────────────
-const KKEY='943c6dbf693c303fc47b5d1856d46da5';
-const USEK=false;   // 카카오 도메인 승인 문제 — 해결되면 true 로
-let KMAP=null,KMARK=[],KREADY=false;
-let KTRIED=false, KFAIL=false;
-function loadKakao(){
-  if(KTRIED)return;
-  KTRIED=true;
-  const s=document.createElement('script');
-  s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+KKEY+
-        '&libraries=services&autoload=false';
-  s.onerror=()=>{
-    KFAIL=true;
-    el('nearinfo').innerHTML='<b style="color:#c2410c">카카오 지도를 못 불러왔다</b>'+
-      ' — 광고 차단 확장 프로그램이 막았을 수 있다 (시크릿 창에서 확인)';
-    initMap();nearby();};
-  s.onload=()=>kakao.maps.load(()=>{
-    KREADY=true;
-    KMAP=new kakao.maps.Map(el('lmap'),{
-      center:new kakao.maps.LatLng(LOC?LOC.latitude:37.2939,
-                                   LOC?LOC.longitude:126.9769),level:4});
-    const rl=()=>{try{KMAP.relayout();}catch(e){}};
-    setTimeout(rl,150);setTimeout(rl,600);setTimeout(rl,1500);
-    window.addEventListener('resize',rl);
-    if(window.ResizeObserver)new ResizeObserver(rl).observe(el('lmap'));
-    el('nearinfo').textContent='카카오맵 준비됨';
-    try{KMAP.relayout();}catch(e){}
-    if(LOC){KMAP.setCenter(new kakao.maps.LatLng(LOC.latitude,LOC.longitude));
-      kakaoSearch();}
-  });
-  document.head.appendChild(s);
-}
-function kakaoSearch(){
-  if(!KREADY)return false;
-  const ps=new kakao.maps.services.Places();
-  const kw=(last?last[0]:'');
-  const done=(data,st)=>{
-    if(st!==kakao.maps.services.Status.OK){
-      el('near').innerHTML='<div class="tip">주변에서 못 찾았다. '+
-        '반경을 넓혀보라.</div>';return;}
-    KMARK.forEach(m=>m.setMap(null));KMARK=[];
-    const b=new kakao.maps.LatLngBounds(),rows=[];
-    data.slice(0,30).forEach(d=>{
-      const pos=new kakao.maps.LatLng(d.y,d.x);
-      const mk=new kakao.maps.Marker({map:KMAP,position:pos});
-      const iw=new kakao.maps.InfoWindow({content:
-        '<div style="padding:6px 10px;font-size:12px">'+d.place_name+'</div>'});
-      kakao.maps.event.addListener(mk,'click',()=>iw.open(KMAP,mk));
-      KMARK.push(mk);b.extend(pos);
-      rows.push('<a class="nr" target="_blank" href="'+d.place_url+'">'+
-        '<span class="ne">📍</span><span class="nn">'+d.place_name+'</span>'+
-        '<span class="nc">'+(d.category_name||'').split('>').pop().trim()+
-        '</span><span class="nd">'+(d.distance?d.distance+' m':'')+'</span></a>');
-    });
-    KMAP.setBounds(b);
-    el('nearinfo').textContent=rows.length+' 곳 · 카카오맵';
-    el('near').innerHTML=rows.join('');
-  };
-  const opt={location:LOC?new kakao.maps.LatLng(LOC.latitude,LOC.longitude):null,
-     radius:+el('rad').value,sort:kakao.maps.services.SortBy.DISTANCE};
-  if(kw){
-    // 뽑힌 메뉴로 먼저 찾고, 없으면 음식점 전체로
-    ps.keywordSearch(kw,(d,s)=>{
-      if(s===kakao.maps.services.Status.OK&&d.length)done(d,s);
-      else ps.categorySearch('FD6',done,opt);
-    },opt);
-  }else{
-    ps.categorySearch('FD6',done,opt);
-  }
-  return true;
-}
-function initMap(){
-  if(USEK){if(!KMAP&&!KREADY)loadKakao();return;}
-  if(LMAP||typeof L==='undefined')return;
-  const c=LOC?[LOC.latitude,LOC.longitude]:[37.2939,126.9769];
-  LMAP=L.map('lmap').setView(c,16);
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-    {maxZoom:19,attribution:'© OpenStreetMap'}).addTo(LMAP);
-  LAYER=L.layerGroup().addTo(LMAP);
-  // 접혔다 펴지거나 폭이 바뀌면 타일이 비어 보인다 — 크기를 다시 잡는다
-  const fix=()=>{try{LMAP.invalidateSize();}catch(e){}};
-  setTimeout(fix,120);setTimeout(fix,500);setTimeout(fix,1200);
-  window.addEventListener('resize',fix);
-  if(window.ResizeObserver)new ResizeObserver(fix).observe(el('lmap'));
-  if(LOC)L.circleMarker(c,{radius:8,color:'#c2410c',fillColor:'#c2410c',
-    fillOpacity:.9}).addTo(LMAP).bindPopup('내 위치');
-}
+// ── 주변 검색 ─────────────────────────────────
+let LOC=null;
 function locate(){
-  if(!navigator.geolocation){el('nearinfo').textContent='위치 기능이 없다';
-    initMap();return;}
-  el('nearinfo').textContent='위치 확인 중…';
-  navigator.geolocation.getCurrentPosition(p=>{
-    LOC=p.coords;initMap();
-    if(LMAP){LMAP.setView([LOC.latitude,LOC.longitude],16);
-      L.circleMarker([LOC.latitude,LOC.longitude],{radius:8,color:'#c2410c',
-        fillColor:'#c2410c',fillOpacity:.9}).addTo(LMAP).bindPopup('내 위치');}
-    if(KMAP)KMAP.setCenter(new kakao.maps.LatLng(LOC.latitude,LOC.longitude));
-    el('nearinfo').textContent='위치 확인됨';
-    nearby();
-  },()=>{el('nearinfo').textContent='위치를 못 잡았다 (자물쇠 → 위치 허용)';
-    initMap();},{enableHighAccuracy:true,timeout:8000,maximumAge:300000});
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(
+    p=>{LOC=p.coords;
+        el('nearinfo').textContent='위치 확인됨 — 내 주변으로 찾는다';},
+    ()=>{el('nearinfo').textContent='위치 없이 지역 검색';},
+    {enableHighAccuracy:true,timeout:8000,maximumAge:300000});
 }
-function dist(a,b,c,d){
-  const R=6371000,r=Math.PI/180;
-  const x=(c-a)*r,y=(d-b)*r*Math.cos((a+c)/2*r);
-  return Math.round(Math.sqrt(x*x+y*y)*R);
-}
-const CUIS={korean:'한식',japanese:'일식',chinese:'중식',italian:'양식',
- pizza:'피자',burger:'버거',chicken:'치킨',noodle:'면',sushi:'초밥',
- ramen:'라멘',thai:'아시안',vietnamese:'아시안',asian:'아시안',
- barbecue:'고기',seafood:'해물',cafe:'카페',bakery:'빵'};
-let waitN=0;
-function nearby(){
-  if(!LOC){locate();return;}
-  if(USEK&&!KFAIL){
-    if(kakaoSearch()){waitN=0;return;}
-    if(waitN<15){
-      waitN++;
-      el('near').innerHTML='<div class="tip">지도 준비 중…</div>';
-      setTimeout(nearby,400);return;
-    }
-    KFAIL=true;
-    el('nearinfo').textContent='카카오 실패 — OSM 으로 대체';
-    initMap();
-  }
-  const r=+el('rad').value;
-  el('near').innerHTML='<div class="tip">찾는 중…</div>';
-  const q='[out:json][timeout:25];(node["amenity"~"restaurant|fast_food"]'+
-    '(around:'+r+','+LOC.latitude+','+LOC.longitude+'););out body 60;';
-  const SRV=['https://overpass-api.de/api/interpreter'];
-  const tryFetch=i=>{
-    const ac=new AbortController();
-    const to=setTimeout(()=>ac.abort(),8000);
-    return fetch(SRV[i]+'?data='+encodeURIComponent(q),{signal:ac.signal})
-      .then(x=>{clearTimeout(to);if(!x.ok)throw 0;return x.json();})
-      .catch(e=>{clearTimeout(to);
-        if(i+1<SRV.length)return tryFetch(i+1);throw e;});
-  };
-  tryFetch(0)
-   .then(j=>{
-     const want=last?last[0]:'';
-     const list=(j.elements||[]).filter(e=>e.tags&&e.tags.name).map(e=>({
-       n:e.tags.name,
-       c:CUIS[(e.tags.cuisine||'').split(';')[0]]||e.tags.cuisine||'',
-       d:dist(LOC.latitude,LOC.longitude,e.lat,e.lon),
-       lat:e.lat,lon:e.lon
-     }));
-     list.forEach(x=>{x.hit=!!(want&&(x.n.includes(want)||
-       (last&&last[3]&&x.c===last[3])));});
-     list.sort((a,b)=>(b.hit-a.hit)||(a.d-b.d));
-     const top=list.slice(0,25);
-     el('nearinfo').textContent=top.length+' 곳 · 반경 '+
-       (r>=1000?(r/1000)+' km':r+' m');
-     el('near').innerHTML=top.map(x=>
-       '<a class="nr" target="_blank" href="https://map.kakao.com/?q='+
-       encodeURIComponent(x.n)+'"><span class="ne">'+(x.hit?'⭐':'📍')+
-       '</span><span class="nn">'+x.n+'</span>'+
-       (x.c?'<span class="nc">'+x.c+'</span>':'')+
-       '<span class="nd">'+x.d+' m</span></a>').join('')||
-       '<div class="tip">이 반경에 등록된 식당이 없다. 반경을 넓혀보라.</div>';
-     if(LMAP&&LAYER){
-       LAYER.clearLayers();
-       const pts=[];
-       top.forEach(x=>{pts.push([x.lat,x.lon]);
-         L.marker([x.lat,x.lon]).addTo(LAYER).bindPopup('<b>'+x.n+'</b>'+
-           (x.c?'<br>'+x.c:'')+'<br>'+x.d+' m<br>'+
-           '<a href="https://map.kakao.com/?q='+encodeURIComponent(x.n)+
-           '" target="_blank">카카오맵에서 보기 ↗</a>');});
-       if(LOC)pts.push([LOC.latitude,LOC.longitude]);
-       try{LMAP.invalidateSize();}catch(e){}
-       if(pts.length)LMAP.fitBounds(pts,{padding:[28,28]});
-     }
-   })
-   .catch(()=>{el('near').innerHTML=
-     '<div class="tip"><b>목록을 못 불러왔다.</b> OpenStreetMap 공개 서버가 '+
-     '가끔 막힌다.<br>「주변 다시 찾기」 를 한 번 더 누르거나, '+
-     '<b>바탕화면 「뭐먹지 (지도)」 로 열면</b> 카카오맵으로 안정적으로 뜬다.</div>';
-     el('nearinfo').textContent='조회 실패';});
-}
-el('nearBtn').onclick=()=>{LOC?nearby():locate();};
-el('mapK').onclick=()=>{
+function openMap(kind){
   const nm=last?last[0]:'맛집';
-  window.open('https://map.kakao.com/?q='+encodeURIComponent(nm),'_blank');
-};
+  if(kind==='k'){
+    const q=encodeURIComponent(nm);
+    const u=LOC
+      ? 'https://map.kakao.com/?q='+q+'&urlX='+Math.round(LOC.longitude*1e6)+
+        '&urlY='+Math.round(LOC.latitude*1e6)+'&urlLevel=4'
+      : 'https://map.kakao.com/?q='+encodeURIComponent(nm+' 맛집');
+    window.open(u,'_blank');
+  }else{
+    const u='https://map.naver.com/p/search/'+encodeURIComponent(nm+' 맛집');
+    window.open(LOC?u+'?c=15.00,0,0,0,dh&x='+LOC.longitude+'&y='+LOC.latitude:u,
+      '_blank');
+  }
+}
+el('mapK').onclick=()=>openMap('k');
+el('mapN').onclick=()=>openMap('n');
+locate();
+
 setInterval(()=>{
   const d=new Date();
   el('clock').textContent=String(d.getHours()).padStart(2,'0')+':'+
