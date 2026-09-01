@@ -52,10 +52,10 @@ h1 b{color:var(--warm)}
 #wheel{width:100%;height:100%;border-radius:50%;position:relative;
  transition:transform 4s cubic-bezier(.17,.67,.24,1);border:5px solid #fff;
  box-shadow:0 6px 24px rgba(194,65,12,.18)}
-.sl{position:absolute;inset:0;clip-path:polygon(50% 50%,50% 0,100% 0);
- transform-origin:50% 50%}
-.sl span{position:absolute;top:26%;left:68%;font-size:20px;
- transform:translate(-50%,-50%) rotate(22deg)}
+.sl{position:absolute;left:50%;top:50%;width:0;height:0;
+ transform-origin:0 0}
+.sl span{position:absolute;left:-13px;top:-88px;font-size:22px;
+ display:block;line-height:1}
 .pin{position:absolute;top:-12px;left:50%;transform:translateX(-50%);
  font-size:24px;z-index:5}
 .hub{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -511,8 +511,10 @@ function drawWheel(list){
   const deg=360/n;
   w.style.background='conic-gradient('+Array.from({length:n},(_,i)=>
     COL[i%COL.length]+' '+(i*deg)+'deg '+((i+1)*deg)+'deg').join(',')+')';
+  const R=(w.clientWidth||250)*0.34;      // 가운데에서 이모지까지 거리
   w.innerHTML=Array.from({length:n},(_,i)=>
-    '<div class="sl" style="transform:rotate('+(i*deg)+'deg)"><span>'+
+    '<div class="sl" style="transform:rotate('+(i*deg+deg/2)+'deg)">'+
+    '<span style="top:'+(-R-11)+'px">'+
     ((FACE[i]&&FACE[i][5])||'🍽')+'</span></div>').join('');
 }
 function roll(){
