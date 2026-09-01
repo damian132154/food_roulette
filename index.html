@@ -574,7 +574,10 @@ function loadKakao(){
   const s=document.createElement('script');
   s.src='https://dapi.kakao.com/v2/maps/sdk.js?appkey='+KKEY+
         '&libraries=services&autoload=false';
-  s.onerror=()=>{initMap();};
+  s.onerror=()=>{
+    el('nearinfo').innerHTML='<b style="color:#c2410c">카카오 거부(403)</b> — '+
+      '도메인 등록 확인 필요';
+    initMap();};
   s.onload=()=>kakao.maps.load(()=>{
     KREADY=true;
     KMAP=new kakao.maps.Map(el('lmap'),{
@@ -686,9 +689,7 @@ function nearby(){
   el('near').innerHTML='<div class="tip">찾는 중…</div>';
   const q='[out:json][timeout:25];(node["amenity"~"restaurant|fast_food"]'+
     '(around:'+r+','+LOC.latitude+','+LOC.longitude+'););out body 60;';
-  const SRV=['https://overpass-api.de/api/interpreter',
-             'https://overpass.kumi.systems/api/interpreter',
-             'https://maps.mail.ru/osm/tools/overpass/api/interpreter'];
+  const SRV=['https://overpass-api.de/api/interpreter'];
   const tryFetch=i=>{
     const ac=new AbortController();
     const to=setTimeout(()=>ac.abort(),8000);
