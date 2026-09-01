@@ -165,6 +165,7 @@ footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:28px}
       <button class="btn" id="roll">뽑기</button>
       <button class="btn g" id="again">다시</button>
       <button class="btn g" id="eat">이걸로 먹음</button>
+      <button class="btn g" id="reload" title="최신 버전으로 다시 받는다">새로고침</button>
     </div>
   </div>
   <div class="card filters" style="margin-top:13px">
@@ -176,6 +177,9 @@ footer{text-align:center;color:var(--ink3);font-size:12px;margin-top:28px}
     <div class="seg" id="segSkip"></div>
     <div class="lb">조건 <span class="cs">겹쳐 누를 수 있다</span></div>
     <div class="seg" id="segOpt"></div>
+    <div class="lb">찾기 <span class="cs">이름 · 초성으로 걸러진다</span></div>
+    <input id="fq" class="ci" placeholder="예: 삼각, 라면, ㄱㅊㅉㄱ"
+      autocomplete="off" style="width:100%;margin-bottom:10px">
     <div class="pool" id="pool"></div>
     <div class="cands" id="cands"></div>
   </div>
@@ -545,7 +549,6 @@ const OPTS=['국물','고기','면','매움','가벼움','저칼로리','빠름'
  '해장','채소','단백질','든든'];
 let selMeal='',selCat=new Set(),selOpt=new Set(),last=null;
 let SKIP=+(LSget('eat_skip')??5);
-let LOC=null,LMAP=null,LAYER=null;
 function el(i){return document.getElementById(i);}
 function autoMeal(){const h=new Date().getHours();
   return h<10?'아침':h<15?'점심':h<21?'저녁':'간식 (야식)';}
@@ -591,18 +594,39 @@ function pick(){
     if(selCat.size&&!selCat.has(f[3]))return false;
     if(selOpt.size){const tg=(f[4]||'').split(',');
       for(const o of selOpt)if(!tg.includes(o))return false;}
+    if(!hit(f[0],FQ))return false;
     return true;
   });
   if(!list.length)return null;
   const fresh=list.filter(f=>!recent.includes(f[0]));
   return fresh.length?fresh:list;
 }
+
+// 한글 초성 검색 — 「ㅅㄱㄱㅂ」 으로도 「삼각김밥」 이 나온다
+const CHO='ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';
+function cho(s){let o='';for(const c of s){const u=c.charCodeAt(0)-0xAC00;
+  o+=(u>=0&&u<11172)?CHO[Math.floor(u/588)]:c;}return o;}
+function norm(s){return s.replace(/\s+/g,'').toLowerCase();}
+function hit(name,q){
+  if(!q)return true;
+  const n=norm(name),s=norm(q);
+  if(n.includes(s))return true;
+  return /^[ㄱ-ㅎ]+$/.test(s)&&cho(n).includes(s);
+}
+function live(input,fn){
+  // 한글은 조합이 끝나야 input 이 뜨는 브라우저가 있다. 셋 다 듣는다.
+  const go=()=>fn(input.value.trim());
+  ['input','keyup','compositionupdate','compositionend'].forEach(
+    e=>input.addEventListener(e,go));
+}
+
+let FQ='';
 function pool(){
   const l=pick();
   el('pool').textContent=l?('후보 '+l.length+' 개'+
     (SKIP?'　·　최근 '+Math.min(SKIP,merged().length)+' 끼 제외':'')):
     '조건에 맞는 게 없다. 조건을 풀어라.';
-  el('cands').innerHTML=l?l.slice(0,16).map(f=>
+  el('cands').innerHTML=l?l.slice(0,24).map(f=>
     '<span class="cd">'+(f[5]||'')+' '+f[0]+'</span>').join(''):'';
   drawWheel(l||[]);
 }
@@ -642,6 +666,7 @@ function roll(){
     el('pickname').textContent=(f[5]||'')+' '+f[0];
   },4100);
 }
+live(el('fq'),v=>{FQ=v;pool();});
 el('roll').onclick=roll;
 el('again').onclick=roll;
 el('eat').onclick=()=>{
@@ -708,6 +733,7 @@ function openMap(kind){
       '_blank');
   }
 }
+el('reload').onclick=()=>location.replace(location.href.split('#')[0].split('?')[0]+'?v='+Date.now());
 el('mapK').onclick=()=>openMap('k');
 el('mapN').onclick=()=>openMap('n');
 locate();
@@ -718,7 +744,5 @@ setInterval(()=>{
     String(d.getMinutes()).padStart(2,'0')+' · '+autoMeal()+' 시간';
 },1000);
 hist();pool();
-initMap();
-locate();
 </script>
 </body></html>
