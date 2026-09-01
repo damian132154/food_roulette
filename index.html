@@ -568,7 +568,7 @@ el('cadd').onclick=()=>{
 };
 // ── 지도 ──────────────────────────────────────
 const KKEY='943c6dbf693c303fc47b5d1856d46da5';
-const USEK=location.protocol==='http:'||location.protocol==='https:';
+const USEK=false;   // 카카오 도메인 승인 문제 — 해결되면 true 로
 let KMAP=null,KMARK=[],KREADY=false;
 let KTRIED=false, KFAIL=false;
 function loadKakao(){
@@ -756,7 +756,7 @@ setInterval(()=>{
     String(d.getMinutes()).padStart(2,'0')+' · '+autoMeal()+' 시간';
 },1000);
 hist();pool();
-if(USEK){loadKakao();}else{initMap();}
+initMap();
 locate();
 </script>
 </body></html>
