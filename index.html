@@ -38,10 +38,11 @@ h1 b{color:var(--warm)}
  #slot{font-size:23px}
  .emo{font-size:42px}
  #lmap{height:280px}
- /* 카드 좌우 여백을 전부 같게 */
- .wrap{padding-left:16px;padding-right:16px}
- .card,.stage{margin-left:0;margin-right:0;padding-left:16px;padding-right:16px}
- .cols{gap:12px}
+ /* 카드 폭 · 여백을 전부 같게 */
+ .cols{gap:12px;align-items:stretch}
+ .card,.stage{width:100%;max-width:100%;margin:0 0 12px;box-sizing:border-box;
+   padding:16px}
+ .stage{padding:18px 16px}
  .seg{gap:7px}
  .sg{padding:8px 15px;font-size:13px}
 }
