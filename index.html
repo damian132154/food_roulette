@@ -509,7 +509,10 @@ function drawWheel(list){
     ((FACE[i]&&FACE[i][5])||'🍽')+'</span></div>').join('');
 }
 function roll(){
-  if(!FACE.length){el('slot').innerHTML='—';return;}
+  const l=pick();
+  if(!l||!l.length){el('slot').innerHTML='—';
+    el('meta').textContent='조건에 맞는 게 없다';return;}
+  drawWheel(l);                 // 누를 때마다 후보 전체에서 8 개를 새로 올린다
   const n=FACE.length,deg=360/n;
   const idx=Math.floor(Math.random()*n);
   const f=FACE[idx];
